@@ -100,5 +100,4 @@ describe("RobustWebSocket", () => {
     await expect(newServer).toReceiveMessage("c");
     await expect(newServer).toReceiveMessage("d");
   });
-
 });

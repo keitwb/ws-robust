@@ -1,17 +1,17 @@
 {
   "name": "ws-robust",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "A wrapper around the browser's WebSocket to make it easier to work with",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "index.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "jest --silent --coverage",
-    "lint": "eslint ./src",
+    "lint": "eslint ./*.ts",
     "prepare": "npm run build",
     "prepublishOnly": "npm test && npm run lint",
     "preversion": "npm run lint",
-    "version": "npm run format && git add -A src",
+    "version": "git add -A .",
     "postversion": "git push && git push --tags"
   },
   "repository": {
@@ -27,6 +27,7 @@
     "url": "https://github.com/keitwb/ws-robust/issues"
   },
   "homepage": "https://github.com/keitwb/ws-robust#readme",
+  "sideEffects": false,
   "devDependencies": {
     "@types/jest": "^26.0.23",
     "@types/websocket": "^1.0.2",
