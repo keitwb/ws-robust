@@ -91,6 +91,7 @@ describe("RobustWebSocket", () => {
     await wait(1);
 
     rs.send("c");
+    await wait(1);
 
     const newServer = new WS(url);
     await newServer.connected;
@@ -99,5 +100,39 @@ describe("RobustWebSocket", () => {
 
     await expect(newServer).toReceiveMessage("c");
     await expect(newServer).toReceiveMessage("d");
+
+    rs.close();
+    newServer.close();
+  });
+
+  test("calls onOpen option on each open", async () => {
+    let openCount = 0;
+    const rs = new RobustWebSocket(url, onMessage, {
+      reconnectTimeoutMillis: 500,
+      onOpen: () => {
+        console.log("hook called");
+        openCount += 1;
+      },
+    });
+    await server.connected;
+
+    expect(openCount).toEqual(1);
+
+    server.close({ code: 1006, reason: "test reopen", wasClean: false });
+
+    await wait(1);
+    const newServer = new WS(url);
+    await newServer.connected;
+
+    expect(openCount).toEqual(2);
+
+    rs.close();
+
+    await wait(1);
+
+    newServer.close();
+
+    // Is not called when explicitly closed.
+    expect(openCount).toEqual(2);
   });
 });

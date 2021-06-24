@@ -1,5 +1,9 @@
 export interface WebSocketOptions {
-  reconnectTimeoutMillis: number;
+  // How long to wait after an unexpected close until attempting to reconnect.
+  reconnectTimeoutMillis?: number;
+  // A function that will be called every time the socket opens, either initially or after a
+  // reconnect.
+  onOpen?: (ws: RobustWebSocket) => void;
 }
 
 export default class RobustWebSocket {
@@ -8,13 +12,14 @@ export default class RobustWebSocket {
 
   private options: WebSocketOptions = {
     reconnectTimeoutMillis: 5000,
+    onOpen: (_: RobustWebSocket) => { }, // eslint-disable-line
   };
 
   private pendingOnOpens: (() => void)[] = [];
 
   constructor(readonly url: string, readonly onmessage: (msg: MessageEvent) => unknown, options?: WebSocketOptions) {
     if (options) {
-      this.options = {...this.options, ...options};
+      this.options = { ...this.options, ...options };
     }
     this.init()
   }
@@ -22,7 +27,9 @@ export default class RobustWebSocket {
   private init() {
     this.ws = new WebSocket(this.url);
 
-    this.ws.addEventListener("open", () => {
+    this.ws.onopen = () => {
+      this.options.onOpen(this);
+
       for (const f of this.pendingOnOpens) {
         try {
           f();
@@ -31,14 +38,14 @@ export default class RobustWebSocket {
         }
       }
       this.pendingOnOpens = [];
-    });
+    };
 
     let reinited = false;
     this.ws.onerror = this.ws.onclose = ev => {
       if (this.isClosed) {
         return;
       }
-      console.log(`Websocket to ${this.url} closed or errored (code=${ev.code} reason=${ev.reason})`);
+      console.log(`Websocket to ${this.url} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
 
       setTimeout(() => {
         if (!reinited) {
