@@ -2,7 +2,7 @@ export interface WebSocketOptions {
     reconnectTimeoutMillis?: number;
     onOpen?: (ws: WebSocketLike) => (Promise<void> | void);
 }
-interface WebSocketLike {
+export interface WebSocketLike {
     onclose: ((this: WebSocket, ev: CloseEvent) => any) | null;
     onerror: ((this: WebSocket, ev: Event) => any) | null;
     onmessage: ((this: WebSocket, ev: MessageEvent) => any) | null;
@@ -33,4 +33,3 @@ export default class RobustWebSocket<T extends WebSocketLike> {
     send(msg: string | ArrayBufferLike | Blob | ArrayBufferView): void;
     close(code?: number, reason?: string): void;
 }
-export {};

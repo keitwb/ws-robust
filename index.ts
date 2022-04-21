@@ -6,7 +6,7 @@ export interface WebSocketOptions {
   onOpen?: (ws: WebSocketLike) => (Promise<void> | void);
 }
 
-interface WebSocketLike {
+export interface WebSocketLike {
   onclose: ((this: WebSocket, ev: CloseEvent) => any) | null;
   onerror: ((this: WebSocket, ev: Event) => any) | null;
   onmessage: ((this: WebSocket, ev: MessageEvent) => any) | null;
