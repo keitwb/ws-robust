@@ -141,8 +141,8 @@ describe("RobustWebSocket", () => {
     let openCount = 0;
     const rs = new RobustWebSocket(url, onMessage, {
       reconnectTimeoutMillis: 500,
-      onOpen: async () => {
-        console.log("hook called");
+      onOpen: async (ws) => {
+        ws.send("in-on-open");
         openCount += 1;
         return wait(500);
       },
@@ -151,12 +151,13 @@ describe("RobustWebSocket", () => {
 
     expect(openCount).toEqual(1);
     rs.send("a");
-    await wait(1);
+    await wait(200);
 
-    expect(server.messages).toHaveLength(0);
+    expect(server.messages).toHaveLength(1);
+    expect(server.messages[0]).toEqual("in-on-open");
 
     await wait(505);
-    expect(server.messages).toHaveLength(1);
+    expect(server.messages).toHaveLength(2);
 
     rs.close();
 
