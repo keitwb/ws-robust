@@ -155,7 +155,7 @@ describe("RobustWebSocket", () => {
 
     expect(server.messages).toHaveLength(0);
 
-    await wait(502);
+    await wait(505);
     expect(server.messages).toHaveLength(1);
 
     rs.close();

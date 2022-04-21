@@ -8,7 +8,8 @@ export interface WebSocketOptions {
 
 export default class RobustWebSocket {
   private ws: WebSocket;
-  private isClosed = false;
+  private isOpen = false;
+  private closedManually = false;
 
   private options: WebSocketOptions = {
     reconnectTimeoutMillis: 5000,
@@ -25,6 +26,8 @@ export default class RobustWebSocket {
   }
 
   private init() {
+    this.closedManually = false;
+    this.isOpen = false;
     this.ws = new WebSocket(this.url);
 
     this.ws.onopen = async () => {
@@ -32,6 +35,8 @@ export default class RobustWebSocket {
       if (maybePromise) {
         await maybePromise;
       }
+
+      this.isOpen = true;
 
       for (const f of this.pendingOnOpens) {
         try {
@@ -45,13 +50,15 @@ export default class RobustWebSocket {
 
     let reinited = false;
     this.ws.onerror = this.ws.onclose = ev => {
-      if (this.isClosed) {
+      // Check if we closed manually:
+      if (this.closedManually) {
         return;
       }
       console.log(`Websocket to ${this.url} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
 
       setTimeout(() => {
         if (!reinited) {
+          // Set this in case we get both onerror and onclose for the same socket instance.
           reinited = true;
           this.init();
         }
@@ -62,7 +69,7 @@ export default class RobustWebSocket {
   }
 
   private _doWhenOpen(f: () => void) {
-    if (this.ws.readyState !== WebSocket.OPEN) {
+    if (!this.isOpen || this.ws.readyState !== WebSocket.OPEN) {
       this.pendingOnOpens.push(f);
     } else {
       f();
@@ -82,7 +89,7 @@ export default class RobustWebSocket {
 
   // Close the connection to the server.  It will not be reestablished in this case.
   close(code?: number, reason?: string): void {
-    this.isClosed = true;
+    this.closedManually = true;
     this.ws.close(code, reason);
   }
 }

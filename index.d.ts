@@ -6,7 +6,8 @@ export default class RobustWebSocket {
     readonly url: string;
     readonly onmessage: (msg: MessageEvent) => unknown;
     private ws;
-    private isClosed;
+    private isOpen;
+    private closedManually;
     private options;
     private pendingOnOpens;
     constructor(url: string, onmessage: (msg: MessageEvent) => unknown, options?: WebSocketOptions);
