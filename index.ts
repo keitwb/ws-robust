@@ -3,7 +3,7 @@ export interface WebSocketOptions {
   reconnectTimeoutMillis?: number;
   // A function that will be called every time the socket opens, either initially or after a
   // reconnect.
-  onOpen?: (ws: RobustWebSocket) => void;
+  onOpen?: (ws: RobustWebSocket) => (Promise<void> | void);
 }
 
 export default class RobustWebSocket {
@@ -27,8 +27,11 @@ export default class RobustWebSocket {
   private init() {
     this.ws = new WebSocket(this.url);
 
-    this.ws.onopen = () => {
-      this.options.onOpen(this);
+    this.ws.onopen = async () => {
+      const maybePromise = this.options.onOpen(this);
+      if (maybePromise) {
+        await maybePromise;
+      }
 
       for (const f of this.pendingOnOpens) {
         try {

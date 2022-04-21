@@ -1,6 +1,6 @@
 {
   "name": "ws-robust",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A wrapper around the browser's WebSocket to make it easier to work with",
   "main": "index.js",
   "types": "index.d.ts",
@@ -9,7 +9,7 @@
     "test": "jest --silent --coverage",
     "lint": "eslint ./*.ts",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test && npm run lint",
+    "prepublishOnly": "npm run build && npm test && npm run lint",
     "preversion": "npm run lint",
     "version": "git add -A .",
     "postversion": "git push && git push --tags"

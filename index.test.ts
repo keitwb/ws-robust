@@ -3,8 +3,9 @@ import WS from "jest-websocket-mock";
 import RobustWebSocket from "./index";
 
 async function wait(ms: number) {
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
+    return;
   });
 }
 
@@ -134,5 +135,34 @@ describe("RobustWebSocket", () => {
 
     // Is not called when explicitly closed.
     expect(openCount).toEqual(2);
+  });
+
+  test("waits for onOpen promise return", async () => {
+    let openCount = 0;
+    const rs = new RobustWebSocket(url, onMessage, {
+      reconnectTimeoutMillis: 500,
+      onOpen: async () => {
+        console.log("hook called");
+        openCount += 1;
+        return wait(500);
+      },
+    });
+    await server.connected;
+
+    expect(openCount).toEqual(1);
+    rs.send("a");
+    await wait(1);
+
+    expect(server.messages).toHaveLength(0);
+
+    await wait(502);
+    expect(server.messages).toHaveLength(1);
+
+    rs.close();
+
+    await wait(1);
+
+    // Is not called when explicitly closed.
+    expect(openCount).toEqual(1);
   });
 });

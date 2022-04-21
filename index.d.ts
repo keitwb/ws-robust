@@ -1,6 +1,6 @@
 export interface WebSocketOptions {
     reconnectTimeoutMillis?: number;
-    onOpen?: (ws: RobustWebSocket) => void;
+    onOpen?: (ws: RobustWebSocket) => (Promise<void> | void);
 }
 export default class RobustWebSocket {
     readonly url: string;
