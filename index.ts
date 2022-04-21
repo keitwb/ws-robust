@@ -3,22 +3,34 @@ export interface WebSocketOptions {
   reconnectTimeoutMillis?: number;
   // A function that will be called every time the socket opens, either initially or after a
   // reconnect.
-  onOpen?: (ws: WebSocket) => (Promise<void> | void);
+  onOpen?: (ws: WebSocketLike) => (Promise<void> | void);
 }
 
-export default class RobustWebSocket {
-  private ws: WebSocket;
+interface WebSocketLike {
+  onclose: ((this: WebSocket, ev: CloseEvent) => any) | null;
+  onerror: ((this: WebSocket, ev: Event) => any) | null;
+  onmessage: ((this: WebSocket, ev: MessageEvent) => any) | null;
+  onopen: ((this: WebSocket, ev: Event) => any) | null;
+  readonly readyState: number;
+  readonly url?: string;
+  close?(code?: number, reason?: string): void;
+  send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void;
+  readonly OPEN: number;
+}
+
+export default class RobustWebSocket<T extends WebSocketLike> {
+  private ws: T;
   private isOpen = false;
   private closedManually = false;
 
   private options: WebSocketOptions = {
     reconnectTimeoutMillis: 5000,
-    onOpen: (_: WebSocket) => { }, // eslint-disable-line
+    onOpen: (_: T) => { }, // eslint-disable-line
   };
 
   private pendingOnOpens: (() => void)[] = [];
 
-  constructor(readonly url: string, readonly onmessage: (msg: MessageEvent) => unknown, options?: WebSocketOptions) {
+  constructor(private urlOrFactory: string | (() => T), readonly onmessage: (msg: MessageEvent) => unknown, options?: WebSocketOptions) {
     if (options) {
       this.options = { ...this.options, ...options };
     }
@@ -28,25 +40,14 @@ export default class RobustWebSocket {
   private init() {
     this.closedManually = false;
     this.isOpen = false;
-    this.ws = new WebSocket(this.url);
-
-    this.ws.onopen = async () => {
-      const maybePromise = this.options.onOpen(this.ws);
-      if (maybePromise) {
-        await maybePromise;
-      }
-
-      this.isOpen = true;
-
-      for (const f of this.pendingOnOpens) {
-        try {
-          f();
-        } catch (e) {
-          console.error("Error running pending onOpen callback", e);
-        }
-      }
-      this.pendingOnOpens = [];
-    };
+    if (typeof this.urlOrFactory === "string") {
+      // @ts-ignore  Ignore the error that comes from the compiler not being able to guarantee that
+      // this.ws will always be set to the same subtype of WebSocketLike.  We know it will be since
+      // this.urlOrFactory can only be set once.
+      this.ws = new WebSocket(this.urlOrFactory);
+    } else {
+      this.ws = this.urlOrFactory();
+    }
 
     let reinited = false;
     this.ws.onerror = this.ws.onclose = ev => {
@@ -54,7 +55,7 @@ export default class RobustWebSocket {
       if (this.closedManually) {
         return;
       }
-      console.log(`Websocket to ${this.url} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
+      console.log(`Websocket to ${this.ws.url ?? "unknown"} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
 
       setTimeout(() => {
         if (!reinited) {
@@ -66,6 +67,31 @@ export default class RobustWebSocket {
     };
 
     this.ws.onmessage = this.onmessage;
+
+    if (this.ws.readyState === this.ws.OPEN) {
+      this._doOnOpen();
+    } else {
+      this.ws.onopen = () => this._doOnOpen();
+    }
+
+  }
+
+  private async _doOnOpen() {
+    const maybePromise = this.options.onOpen(this.ws);
+    if (maybePromise) {
+      await maybePromise;
+    }
+
+    this.isOpen = true;
+
+    for (const f of this.pendingOnOpens) {
+      try {
+        f();
+      } catch (e) {
+        console.error("Error running pending onOpen callback", e);
+      }
+    }
+    this.pendingOnOpens = [];
   }
 
   private _doWhenOpen(f: () => void) {
@@ -90,6 +116,8 @@ export default class RobustWebSocket {
   // Close the connection to the server.  It will not be reestablished in this case.
   close(code?: number, reason?: string): void {
     this.closedManually = true;
-    this.ws.close(code, reason);
+    if (this.ws.close) {
+      this.ws.close(code, reason);
+    }
   }
 }

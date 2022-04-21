@@ -10,7 +10,7 @@ async function wait(ms: number) {
 }
 
 describe("RobustWebSocket", () => {
-  const url = "ws://localhost:8080";
+  const url = "ws://localhost:18480";
   let server: WS;
 
   let messages = [] as string[];
@@ -165,5 +165,35 @@ describe("RobustWebSocket", () => {
 
     // Is not called when explicitly closed.
     expect(openCount).toEqual(1);
+  });
+
+  test("accepts factory for web socket and handles already opened", async () => {
+    const ws = new WebSocket(url);
+    await server.connected;
+    expect(ws.readyState).toEqual(ws.OPEN);
+
+    let openCount = 0;
+    const rs = new RobustWebSocket(() => {
+      return ws;
+    }, onMessage, {
+      onOpen: () => {
+        openCount++;
+      },
+    });
+
+    expect(openCount).toEqual(1);
+
+    rs.send("c1");
+    server.send("s1");
+    rs.send("c2");
+    server.send("s2");
+    await wait(1);
+    server.send("s3");
+    await wait(10);
+
+    expect(messages).toEqual(["s1", "s2", "s3"]);
+    expect(server.messages).toEqual(["c1", "c2"]);
+
+    rs.close();
   });
 });
