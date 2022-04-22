@@ -3,14 +3,22 @@ export interface WebSocketOptions {
     onOpen?: (ws: WebSocketLike) => (Promise<void> | void);
 }
 export interface WebSocketLike {
-    onclose: ((this: WebSocket, ev: CloseEvent) => any) | null;
-    onerror: ((this: WebSocket, ev: Event) => any) | null;
-    onmessage: ((this: WebSocket, ev: MessageEvent) => any) | null;
-    onopen: ((this: WebSocket, ev: Event) => any) | null;
+    onclose: ((ev: {
+        code: any;
+        reason?: any;
+    }) => any) | null;
+    onerror: ((ev: {
+        code?: any;
+        reason?: any;
+    }) => any) | null;
+    onmessage: ((ev: {
+        data: any;
+    }) => any) | null;
+    onopen: ((ev: any) => any) | null;
     readonly readyState: number;
     readonly url?: string;
     close?(code?: number, reason?: string): void;
-    send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void;
+    send(data: string | ArrayBufferLike | ArrayBufferView): void;
     readonly OPEN: number;
 }
 export default class RobustWebSocket<T extends WebSocketLike> {
@@ -30,6 +38,6 @@ export default class RobustWebSocket<T extends WebSocketLike> {
      * connection is reestablished, at which point it will be sent in order.  It is still possible
      * that messages can be lost if the connection is broken in transit or right before.
      */
-    send(msg: string | ArrayBufferLike | Blob | ArrayBufferView): void;
+    send(msg: string | ArrayBufferLike | ArrayBufferView): void;
     close(code?: number, reason?: string): void;
 }
