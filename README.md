@@ -32,3 +32,12 @@ $ npm install --save ws-robust
 
     rs.close();
 ```
+
+## Development
+
+To upgrade this package commit the changes desired to the master branch, then run
+
+```
+npm version <new version>
+npm publish
+```
