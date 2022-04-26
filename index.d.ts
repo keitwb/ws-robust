@@ -1,6 +1,7 @@
 export interface WebSocketOptions {
     reconnectTimeoutMillis?: number;
     onOpen?: (ws: WebSocketLike) => (Promise<void> | void);
+    onDisconnect?: (ws: WebSocketLike) => (Promise<void> | void);
 }
 export interface WebSocketLike {
     onclose: ((ev: {

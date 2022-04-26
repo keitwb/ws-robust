@@ -4,12 +4,13 @@ export interface WebSocketOptions {
   // A function that will be called every time the socket opens, either initially or after a
   // reconnect.
   onOpen?: (ws: WebSocketLike) => (Promise<void> | void);
+  onDisconnect?: (ws: WebSocketLike) => (Promise<void> | void);
 }
 
 export interface WebSocketLike {
-  onclose: ((ev: {code: any, reason?: any}) => any) | null;
-  onerror: ((ev: {code?: any, reason?: any}) => any) | null;
-  onmessage: ((ev: {data: any}) => any) | null;
+  onclose: ((ev: { code: any, reason?: any }) => any) | null;
+  onerror: ((ev: { code?: any, reason?: any }) => any) | null;
+  onmessage: ((ev: { data: any }) => any) | null;
   onopen: ((ev: any) => any) | null;
   readonly readyState: number;
   readonly url?: string;
@@ -26,6 +27,7 @@ export default class RobustWebSocket<T extends WebSocketLike> {
   private options: WebSocketOptions = {
     reconnectTimeoutMillis: 5000,
     onOpen: (_: T) => { }, // eslint-disable-line
+    onDisconnect: (_: T) => { }, // eslint-disable-line
   };
 
   private pendingOnOpens: (() => void)[] = [];
@@ -50,12 +52,17 @@ export default class RobustWebSocket<T extends WebSocketLike> {
     }
 
     let reinited = false;
-    this.ws.onerror = this.ws.onclose = ev => {
+    this.ws.onerror = this.ws.onclose = async ev => {
       // Check if we closed manually:
       if (this.closedManually) {
         return;
       }
       console.log(`Websocket to ${this.ws.url ?? "unknown"} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
+
+      const maybePromise = this.options.onDisconnect(this.ws);
+      if (maybePromise) {
+        await maybePromise;
+      }
 
       setTimeout(() => {
         if (!reinited) {

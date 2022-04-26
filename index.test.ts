@@ -43,8 +43,12 @@ describe("RobustWebSocket", () => {
   });
 
   test("reestablishes when websocket reconnects", async () => {
+    let disconnects = 0;
     const rs = new RobustWebSocket(url, onMessage, {
       reconnectTimeoutMillis: 50,
+      onDisconnect: () => {
+        disconnects++;
+      },
     });
     await server.connected;
 
@@ -55,6 +59,8 @@ describe("RobustWebSocket", () => {
 
     server = new WS(url);
     await server.connected;
+
+    expect(disconnects).toEqual(1);
 
     server.send("c");
     server.send("d");
