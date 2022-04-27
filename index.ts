@@ -102,7 +102,7 @@ export default class RobustWebSocket<T extends WebSocketLike> {
   }
 
   private _doWhenOpen(f: () => void) {
-    if (!this.isOpen || this.ws.readyState !== WebSocket.OPEN) {
+    if (!this.isOpen || this.ws.readyState !== this.ws.OPEN) {
       this.pendingOnOpens.push(f);
     } else {
       f();
