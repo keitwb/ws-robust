@@ -1,10 +1,10 @@
-export interface WebSocketOptions {
+export interface WebSocketOptions<T extends WebSocketLike> {
   // How long to wait after an unexpected close until attempting to reconnect.
   reconnectTimeoutMillis?: number;
   // A function that will be called every time the socket opens, either initially or after a
   // reconnect.
-  onOpen?: (ws: WebSocketLike) => (Promise<void> | void);
-  onDisconnect?: (ws: WebSocketLike) => (Promise<void> | void);
+  onOpen?: (ws: T) => (Promise<void> | void);
+  onDisconnect?: (ws: T) => (Promise<void> | void);
 }
 
 export interface WebSocketLike {
@@ -20,11 +20,11 @@ export interface WebSocketLike {
 }
 
 export default class RobustWebSocket<T extends WebSocketLike> {
-  private ws: T;
+  private ws!: T;
   private isOpen = false;
   private closedManually = false;
 
-  private options: WebSocketOptions = {
+  private options: WebSocketOptions<T> = {
     reconnectTimeoutMillis: 5000,
     onOpen: (_: T) => { }, // eslint-disable-line
     onDisconnect: (_: T) => { }, // eslint-disable-line
@@ -32,7 +32,7 @@ export default class RobustWebSocket<T extends WebSocketLike> {
 
   private pendingOnOpens: (() => void)[] = [];
 
-  constructor(private urlOrFactory: string | (() => T), readonly onmessage: (msg: MessageEvent) => unknown, options?: WebSocketOptions) {
+  constructor(private urlOrFactory: string | (() => T), readonly onmessage: (msg: { data: any }) => unknown, options?: WebSocketOptions<T>) {
     if (options) {
       this.options = { ...this.options, ...options };
     }
@@ -52,16 +52,18 @@ export default class RobustWebSocket<T extends WebSocketLike> {
     }
 
     let reinited = false;
-    this.ws.onerror = this.ws.onclose = async ev => {
+    this.ws.onclose = async ev => {
       // Check if we closed manually:
       if (this.closedManually) {
         return;
       }
       console.log(`Websocket to ${this.ws.url ?? "unknown"} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
 
-      const maybePromise = this.options.onDisconnect(this.ws);
-      if (maybePromise) {
-        await maybePromise;
+      if (this.options.onDisconnect) {
+        const maybePromise = this.options.onDisconnect(this.ws);
+        if (maybePromise) {
+          await maybePromise;
+        }
       }
 
       setTimeout(() => {
@@ -73,7 +75,9 @@ export default class RobustWebSocket<T extends WebSocketLike> {
       }, this.options.reconnectTimeoutMillis);
     };
 
-    this.ws.onmessage = this.onmessage;
+    this.ws.onmessage = ev => {
+      this.onmessage(ev);
+    }
 
     if (this.ws.readyState === this.ws.OPEN) {
       this._doOnOpen();
@@ -84,9 +88,11 @@ export default class RobustWebSocket<T extends WebSocketLike> {
   }
 
   private async _doOnOpen() {
-    const maybePromise = this.options.onOpen(this.ws);
-    if (maybePromise) {
-      await maybePromise;
+    if (this.options.onOpen) {
+      const maybePromise = this.options.onOpen(this.ws);
+      if (maybePromise) {
+        await maybePromise;
+      }
     }
 
     this.isOpen = true;

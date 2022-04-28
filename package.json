@@ -2,8 +2,9 @@
   "name": "ws-robust",
   "version": "0.1.8-beta.4",
   "description": "A wrapper around the browser's WebSocket to make it easier to work with",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
   "scripts": {
     "build": "tsc",
     "test": "jest --silent --coverage",

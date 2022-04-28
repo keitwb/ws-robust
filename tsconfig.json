@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "outDir": ".",
+    "outDir": "./dist",
     "lib": [ "dom", "es2017" ],
     "declaration": true,
     "sourceMap": true,
@@ -9,8 +9,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "suppressImplicitAnyIndexErrors": true,
+    "strict": true,
     "module": "commonjs",
-    "target": "es6",
+    "target": "es5",
     "emitDecoratorMetadata": false,
     "experimentalDecorators": false,
     "typeRoots": ["typings", "node_modules/@types"],
@@ -21,6 +22,7 @@
     }
   },
   "exclude": [
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "dist/**/*"
   ]
 }
