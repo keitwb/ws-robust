@@ -1,4 +1,4 @@
-export interface WebSocketOptions<T extends WebSocketLike> {
+export interface WebSocketOptions<T extends WebSocket> {
   // How long to wait after an unexpected close until attempting to reconnect.
   reconnectTimeoutMillis?: number;
   // A function that will be called every time the socket opens, either initially or after a
@@ -7,19 +7,7 @@ export interface WebSocketOptions<T extends WebSocketLike> {
   onDisconnect?: (ws: T) => (Promise<void> | void);
 }
 
-export interface WebSocketLike {
-  onclose: ((ev: { code: any, reason?: any }) => any) | null;
-  onerror: ((ev: { code?: any, reason?: any }) => any) | null;
-  onmessage: ((ev: { data: any }) => any) | null;
-  onopen: ((ev: any) => any) | null;
-  readonly readyState: number;
-  readonly url?: string;
-  close?(code?: number, reason?: string): void;
-  send(data: string | ArrayBufferLike | ArrayBufferView): void;
-  readonly OPEN: number;
-}
-
-export default class RobustWebSocket<T extends WebSocketLike> {
+export default class RobustWebSocket<T extends WebSocket> {
   private ws!: T;
   private isOpen = false;
   private closedManually = false;
