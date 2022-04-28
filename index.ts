@@ -84,7 +84,6 @@ export default class RobustWebSocket<T extends WebSocketLike> {
     } else {
       this.ws.onopen = () => this._doOnOpen();
     }
-
   }
 
   private async _doOnOpen() {
@@ -131,6 +130,12 @@ export default class RobustWebSocket<T extends WebSocketLike> {
     this.closedManually = true;
     if (this.ws.close) {
       this.ws.close(code, reason);
+    }
+  }
+
+  forceReconnect() {
+    if (this.ws.close) {
+      this.ws.close();
     }
   }
 }

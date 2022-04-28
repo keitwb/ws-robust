@@ -202,4 +202,32 @@ describe("RobustWebSocket", () => {
 
     rs.close();
   });
+
+  test("reestablishes when websocket forces reconnect", async () => {
+    let disconnects = 0;
+    const rs = new RobustWebSocket(url, onMessage, {
+      reconnectTimeoutMillis: 50,
+      onDisconnect: () => {
+        disconnects++;
+      },
+    });
+    await server.connected;
+
+    server.send("a");
+    server.send("b");
+
+    rs.forceReconnect();
+    rs.send("c");
+    await wait(10);
+    expect(disconnects).toEqual(1);
+    rs.send("d");
+    await wait(50);
+    server.send("e");
+    await wait(50);
+
+    expect(messages).toEqual(["a", "b", "e"]);
+    expect(server.messages).toEqual(["c", "d"]);
+
+    rs.close();
+  });
 });
