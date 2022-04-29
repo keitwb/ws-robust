@@ -1,6 +1,6 @@
 {
   "name": "ws-robust",
-  "version": "0.1.8-beta.7",
+  "version": "0.1.8-beta.8",
   "description": "A wrapper around the browser's WebSocket to make it easier to work with",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
