@@ -4,18 +4,19 @@ export interface WebSocketOptions<T extends WebSocket> {
   // A function that will be called every time the socket opens, either initially or after a
   // reconnect.
   onOpen?: (ws: T) => (Promise<void> | void);
-  onDisconnect?: (ws: T) => (Promise<void> | void);
+  onDisconnect?: (ws: T, wantsReconnect: boolean) => (Promise<void> | void);
 }
 
 export default class RobustWebSocket<T extends WebSocket> {
   private ws!: T;
   private isOpen = false;
   private closedManually = false;
+  private wantReconnect = true;
 
   private options: WebSocketOptions<T> = {
     reconnectTimeoutMillis: 5000,
     onOpen: (_: T) => { }, // eslint-disable-line
-    onDisconnect: (_: T) => { }, // eslint-disable-line
+    onDisconnect: (_: T, _2: boolean) => { }, // eslint-disable-line
   };
 
   private pendingOnOpens: (() => void)[] = [];
@@ -29,7 +30,9 @@ export default class RobustWebSocket<T extends WebSocket> {
 
   private init() {
     this.closedManually = false;
+    this.wantReconnect = false;
     this.isOpen = false;
+
     if (typeof this.urlOrFactory === "string") {
       // @ts-ignore  Ignore the error that comes from the compiler not being able to guarantee that
       // this.ws will always be set to the same subtype of WebSocketLike.  We know it will be since
@@ -48,7 +51,7 @@ export default class RobustWebSocket<T extends WebSocket> {
       console.log(`Websocket to ${this.ws.url ?? "unknown"} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
 
       if (this.options.onDisconnect) {
-        const maybePromise = this.options.onDisconnect(this.ws);
+        const maybePromise = this.options.onDisconnect(this.ws, this.wantReconnect);
         if (maybePromise) {
           await maybePromise;
         }
@@ -122,8 +125,7 @@ export default class RobustWebSocket<T extends WebSocket> {
   }
 
   forceReconnect() {
-    if (this.ws.close) {
-      this.ws.close();
-    }
+    this.wantReconnect = true;
+    this.ws.close();
   }
 }

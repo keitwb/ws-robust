@@ -44,10 +44,12 @@ describe("RobustWebSocket", () => {
 
   test("reestablishes when websocket reconnects", async () => {
     let disconnects = 0;
+    let wasWanted = false;
     const rs = new RobustWebSocket(url, onMessage, {
       reconnectTimeoutMillis: 50,
-      onDisconnect: () => {
+      onDisconnect: (_, wanted) => {
         disconnects++;
+        wasWanted = wanted;
       },
     });
     await server.connected;
@@ -61,6 +63,7 @@ describe("RobustWebSocket", () => {
     await server.connected;
 
     expect(disconnects).toEqual(1);
+    expect(wasWanted).toEqual(false);
 
     server.send("c");
     server.send("d");
@@ -205,9 +208,11 @@ describe("RobustWebSocket", () => {
 
   test("reestablishes when websocket forces reconnect", async () => {
     let disconnects = 0;
+    let wasWanted = false;
     const rs = new RobustWebSocket(url, onMessage, {
       reconnectTimeoutMillis: 50,
-      onDisconnect: () => {
+      onDisconnect: (_, wanted: boolean) => {
+        wasWanted = wanted;
         disconnects++;
       },
     });
@@ -219,6 +224,7 @@ describe("RobustWebSocket", () => {
     rs.forceReconnect();
     rs.send("c");
     await wait(10);
+    expect(wasWanted).toEqual(true);
     expect(disconnects).toEqual(1);
     rs.send("d");
     await wait(50);
