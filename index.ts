@@ -7,7 +7,7 @@ export interface WebSocketOptions<T extends WebSocket> {
   onDisconnect?: (ws: T, wantsReconnect: boolean) => (Promise<void> | void);
 }
 
-type WSFactory<T> = string | (() => T) | (() => Promise<T>);
+export type WSFactory<T> = string | (() => T) | (() => Promise<T>);
 
 export default class RobustWebSocket<T extends WebSocket> {
   private ws!: T;
