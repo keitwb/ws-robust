@@ -206,6 +206,23 @@ describe("RobustWebSocket", () => {
     rs.close();
   });
 
+  test("waits for factory promise return", async () => {
+    let openCount = 0;
+    const rs = new RobustWebSocket(async () => {
+      await wait(50);
+      return new WebSocket(url);
+    }, onMessage, {
+      reconnectTimeoutMillis: 500,
+      onOpen: () => {
+        openCount += 1;
+      },
+    });
+    await server.connected;
+
+    expect(openCount).toEqual(1);
+    rs.close();
+  });
+
   test("reestablishes when websocket forces reconnect", async () => {
     let disconnects = 0;
     let wasWanted = false;

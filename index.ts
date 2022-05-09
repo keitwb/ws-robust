@@ -7,6 +7,8 @@ export interface WebSocketOptions<T extends WebSocket> {
   onDisconnect?: (ws: T, wantsReconnect: boolean) => (Promise<void> | void);
 }
 
+type WSFactory<T> = string | (() => T) | (() => Promise<T>);
+
 export default class RobustWebSocket<T extends WebSocket> {
   private ws!: T;
   private isOpen = false;
@@ -21,14 +23,14 @@ export default class RobustWebSocket<T extends WebSocket> {
 
   private pendingOnOpens: (() => void)[] = [];
 
-  constructor(private urlOrFactory: string | (() => T), readonly onmessage: (msg: { data: any }) => unknown, options?: WebSocketOptions<T>) {
+  constructor(private urlOrFactory: WSFactory<T>, readonly onmessage: (msg: { data: any }) => unknown, options?: WebSocketOptions<T>) {
     if (options) {
       this.options = { ...this.options, ...options };
     }
     this.init()
   }
 
-  private init() {
+  private async init() {
     this.closedManually = false;
     this.wantReconnect = false;
     this.isOpen = false;
@@ -39,7 +41,12 @@ export default class RobustWebSocket<T extends WebSocket> {
       // this.urlOrFactory can only be set once.
       this.ws = new WebSocket(this.urlOrFactory);
     } else {
-      this.ws = this.urlOrFactory();
+      const factory = this.urlOrFactory();
+      if (factory instanceof Promise) {
+        this.ws = await factory;
+      } else {
+        this.ws = factory;
+      }
     }
 
     let reinited = false;
