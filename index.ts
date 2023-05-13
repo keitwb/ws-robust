@@ -23,7 +23,7 @@ export default class RobustWebSocket<T extends WebSocket> {
 
   private pendingOnOpens: (() => void)[] = [];
 
-  constructor(private urlOrFactory: WSFactory<T>, readonly onmessage: (msg: { data: any }) => unknown, options?: WebSocketOptions<T>) {
+  constructor(private urlOrFactory: WSFactory<T>, readonly onmessage: (msg: MessageEvent) => unknown, options?: WebSocketOptions<T>) {
     if (options) {
       this.options = { ...this.options, ...options };
     }
@@ -32,7 +32,7 @@ export default class RobustWebSocket<T extends WebSocket> {
 
   private async init() {
     this.closedManually = false;
-    this.wantReconnect = false;
+    this.wantReconnect = true;
     this.isOpen = false;
 
     if (typeof this.urlOrFactory === "string") {
@@ -51,18 +51,17 @@ export default class RobustWebSocket<T extends WebSocket> {
 
     let reinited = false;
     this.ws.onclose = async ev => {
-      // Check if we closed manually:
-      if (this.closedManually) {
-        return;
-      }
-      console.log(`Websocket to ${this.ws.url ?? "unknown"} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
-
       if (this.options.onDisconnect) {
-        const maybePromise = this.options.onDisconnect(this.ws, this.wantReconnect);
+        const maybePromise = this.options.onDisconnect(this.ws, this.closedManually);
         if (maybePromise) {
           await maybePromise;
         }
       }
+      if (!this.wantReconnect) {
+        return;
+      }
+
+      console.log(`Websocket to ${this.ws.url ?? "unknown"} closed or errored (code=${ev.code} reason=${ev.reason}), reconnecting...`);
 
       setTimeout(() => {
         if (!reinited) {
@@ -126,13 +125,67 @@ export default class RobustWebSocket<T extends WebSocket> {
   // Close the connection to the server.  It will not be reestablished in this case.
   close(code?: number, reason?: string): void {
     this.closedManually = true;
+    this.wantReconnect = false;
     if (this.ws.close) {
       this.ws.close(code, reason);
     }
   }
 
   forceReconnect() {
-    this.wantReconnect = true;
+    this.closedManually = true;
     this.ws.close();
   }
+}
+
+interface MessageEventAsyncIterable<T> extends AsyncIterable<MessageEvent<T>>, AsyncIterator<MessageEvent<T>> {
+  onMessage(msg: MessageEvent<T>): void;
+  onDisconnect(_: unknown, wanted: boolean): void;
+}
+
+export function messageAsyncIterator<T>(): MessageEventAsyncIterable<T> {
+  let done = false;
+  let nextResolve: ((res: IteratorResult<MessageEvent<T>, unknown>) => void) | null = null;
+  const messages = [] as MessageEvent<T>[];
+
+  return {
+    onMessage: (msg: MessageEvent<T>) => {
+      if (nextResolve !== null) {
+        nextResolve({
+          done: false,
+          value: msg,
+        });
+        return;
+      }
+      messages.push(msg);
+    },
+    onDisconnect(_: unknown, wanted: boolean) {
+      done = wanted;
+      if (nextResolve) {
+        nextResolve({
+          done: true,
+          value: null,
+        });
+      }
+    },
+    next(): Promise<IteratorResult<MessageEvent<T>>> {
+      if (messages.length > 0) {
+        return Promise.resolve({
+          done: false,
+          value: messages.shift()!, // eslint-disable-line
+        });
+      }
+      if (done) {
+        return Promise.resolve({
+          done: true,
+          value: null,
+        });
+      }
+      return new Promise((resolve) => {
+        nextResolve = resolve;
+      });
+    },
+    [Symbol.asyncIterator]() {
+      return this;
+    }
+  };
 }

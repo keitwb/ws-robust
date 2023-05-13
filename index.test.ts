@@ -1,6 +1,6 @@
 import WS from "jest-websocket-mock";
 
-import RobustWebSocket from "./index";
+import RobustWebSocket, { messageAsyncIterator } from "./index";
 
 async function wait(ms: number) {
   return new Promise<void>((resolve) => {
@@ -252,5 +252,42 @@ describe("RobustWebSocket", () => {
     expect(server.messages).toEqual(["c", "d"]);
 
     rs.close();
+  });
+});
+
+describe("messageAsyncIterator", () => {
+  const url = "ws://localhost:18480";
+  let server: WS;
+
+  const mai = messageAsyncIterator<string>();
+
+  beforeEach(() => {
+    server = new WS(url);
+  });
+
+  afterEach(() => {
+    WS.clean();
+  });
+
+  test("yields all messages received in order and stops on close", async () => {
+    const rs = new RobustWebSocket(url, mai.onMessage, {
+      onDisconnect: mai.onDisconnect,
+    });
+    await server.connected;
+
+    server.send("a");
+    server.send("b");
+
+    setTimeout(() => {
+      server.send("c");
+      rs.close();
+    }, 500);
+
+    const messages: string[] = [];
+    for await (const msg of mai) {
+      messages.push(msg.data);
+      await wait(5);
+    }
+    expect(messages).toEqual(["a", "b", "c"]);
   });
 });
