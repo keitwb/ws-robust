@@ -9,7 +9,7 @@ export interface WebSocketOptions<T extends WebSocket> {
 
 export type WSFactory<T> = string | (() => T) | (() => Promise<T>);
 
-export default class RobustWebSocket<T extends WebSocket> {
+export class RobustWebSocket<T extends WebSocket> {
   private ws!: T;
   private isOpen = false;
   private closedManually = false;

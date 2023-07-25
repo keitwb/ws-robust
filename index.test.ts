@@ -1,6 +1,6 @@
 import WS from "jest-websocket-mock";
 
-import RobustWebSocket, { messageAsyncIterator } from "./index";
+import { RobustWebSocket, messageAsyncIterator } from "./index";
 
 async function wait(ms: number) {
   return new Promise<void>((resolve) => {

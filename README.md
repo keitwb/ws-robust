@@ -24,7 +24,7 @@ $ npm install --save ws-robust
 Basic usage with a simple callback that processes each message received:
 
 ```javascript
-    import RobustWebSocket from "ws-robust";
+    import { RobustWebSocket } from "ws-robust";
 
     const rs = new RobustWebSocket(url, msg => {
       console.log("Received message: ", msg);
@@ -39,7 +39,7 @@ If you want to consume messages with a `for await` async iterator, there is a he
 `messageAsyncIterator` that facilitates this:
 
 ```javascript
-    import RobustWebSocket from "ws-robust";
+    import { RobustWebSocket } from "ws-robust";
 
     const messages = messageAsyncIterator<MyMessageType>();
     const rs = new RobustWebSocket(url, messages.onMessage, {
